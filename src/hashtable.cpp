@@ -12,15 +12,11 @@
 #include <memory>
 #include <optional>
 
-#ifndef BENCH_PLAIN_ALLOCATOR
-// static SlabAllocator<HT_Item> ht_item_allocator;
-#endif
 HT_Item::HT_Item(std::string k, std::string v) : key(std::move(k)), value(std::move(v)) {}
 
 unsigned long HashFunction(const std::string& str){
     return static_cast<unsigned long>(XXH3_64bits(str.data(), str.size()));
 };
-
 
 struct ShardedHashTable::Shard {
     HashTable* map = nullptr;
@@ -65,11 +61,26 @@ bool ShardedHashTable::Delete(const std::string& key) {
     return ht_delete(shard.map, key);
 }
 
+// Each shard takes its own shared (read) lock only while it's being walked,
+// then releases it before moving to the next shard, so a write to a shard
+// already visited can't be observed, but the caller isn't blocking every
+// shard for the whole snapshot either.
+void ShardedHashTable::ForEachSnapshot(const std::function<void(const std::string&, const std::string&)>& fn) const {
+    for (auto& shard_ptr : shards) {
+        Shard& shard = *shard_ptr;
+        std::shared_lock lock(shard.mutex);
+        for (int i = 0; i < shard.map->size; i++) {
+            for (LinkedList* node = shard.map->buckets[i]; node != NULL; node = node->next) {
+                fn(node->item->key, node->item->value);
+            }
+        }
+    }
+}
+
 // ----------------------------------------HASH TABLE----------------------------------------
 
 LinkedList** create_buckets(HashTable* table)
 {
-    // Create the overflow buckets; an array of LinkedLists.
     LinkedList** buckets = (LinkedList**) calloc(table->size, sizeof(LinkedList*));
 
     for (int i = 0; i < table->size; i++)
@@ -80,7 +91,6 @@ LinkedList** create_buckets(HashTable* table)
 
 void free_buckets(HashTable* table)
 {
-    // Free all the overflow bucket lists.
     LinkedList** buckets = table->buckets;
 
     for (int i = 0; i < table->size; i++)
@@ -94,7 +104,7 @@ HT_Item* create_item(HashTable* table, const std::string& key, const std::string
     HT_Item* item = new HT_Item(key,value);
     return item;
 #else
-    return table->item_allocator->allocate(key, value);    
+    return table->item_allocator->allocate(key, value);
 #endif
 }
 
@@ -102,13 +112,12 @@ HashTable* create_table(int size){
     HashTable* table = (HashTable*)malloc(sizeof(HashTable));
     table->size = size;
     table->count = 0;
-    table->item_allocator = new SlabAllocator<HT_Item>();   
+    table->item_allocator = new SlabAllocator<HT_Item>();
     table->list_allocator = new SlabAllocator<LinkedList>();
     table->buckets = create_buckets(table);
     return table;
 }
 
-// Need this function if you ever write anything like malloc/calloc. Since you alloced key, value, item, you need to free all when you delete.
 void free_item(HashTable* table, HT_Item* item){
 #ifdef BENCH_PLAIN_ALLOCATOR
     delete item;
@@ -120,7 +129,7 @@ void free_item(HashTable* table, HT_Item* item){
 void free_table(HashTable* table){
     // free_buckets already frees every item reachable from each bucket's chain.
     free_buckets(table);
-    delete table->item_allocator;                            
+    delete table->item_allocator;
     delete table->list_allocator;
     free(table);
 }
@@ -194,5 +203,3 @@ void print_search(HashTable* table, const std::string& key){
         printf("Key:%s, Value:%s\n", key.c_str(), val->c_str());
     }
 }
-
-

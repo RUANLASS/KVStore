@@ -6,7 +6,6 @@
 #include "include/hashtable.hpp"
 
 int main() {
-    // std::unordered_map<std::string, std::string, > store;
     HashTable* store = create_table(CAPACITY);
     std::string line;
 
@@ -35,7 +34,6 @@ int main() {
                 std::cout << "Usage: SET <key> <value>\n";
                 continue;
             }
-            // store[key] = value;
             ht_insert(store, key, value);
             std::cout << "OK\n";
         } else if (command == "GET") {
@@ -45,20 +43,13 @@ int main() {
                 std::cout << "Usage: GET <key>\n";
                 continue;
             }
+<<<<<<< HEAD
             // auto it = store.find(key);
             // auto it = ht_search(store, key);
             // if (it) {
-            //     std::cout << *it << "\n";
-            // } else {
-            //     std::cout << "(nil)\n";
-            // }
-            print_search(store, key);
-        } 
-        else if (command == "PRINT"){   
             print_table(store);
         } else if (command == "DELETE") {
             std::string key;
-            iss >> key;
             if (key.empty()) {
                 std::cout << "Usage: DELETE <key>\n";
                 continue;

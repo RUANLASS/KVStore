@@ -5,13 +5,8 @@
 #include <cstdlib>
 #include <string>
 
-#ifndef BENCH_PLAIN_ALLOCATOR
-// static SlabAllocator<LinkedList> linkedlist_allocator;
-#endif
-
 LinkedList* allocate_list(HashTable* table)
 {
-    // Allocates memory for a LinkedList pointer, with `next` starting NULL.
 #ifdef BENCH_PLAIN_ALLOCATOR
     LinkedList* list = (LinkedList*) malloc(sizeof(LinkedList));
     list->item = NULL;
@@ -25,7 +20,6 @@ LinkedList* allocate_list(HashTable* table)
 
 LinkedList* linkedlist_insert(HashTable* table, LinkedList* list, HT_Item* item)
 {
-    // Inserts the item onto the LinkedList.
     if (!list)
     {
         LinkedList* head = allocate_list(table);

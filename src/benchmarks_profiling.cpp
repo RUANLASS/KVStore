@@ -14,16 +14,15 @@
 // Profiling-focused benchmarks: allocation count on the hot path, a
 // cache-locality proxy (sequential vs. scattered access latency), lock
 // contention / atomic-operation cost, and latency distributions under
-// varying concurrency. See WRITEUP.md for the full analysis of these
-// numbers -- this file only produces them.
+// varying concurrency.
 //
 // Tooling note: this machine has neither `perf` nor Instruments/`valgrind`
 // available (sandboxed macOS, no hardware performance counters exposed).
-// Where a "real" cache-miss counter would normally be used, this file
-// instead measures latency under access patterns specifically chosen to
-// make cache effects visible (small working set vs. one that overflows
-// L2/L3) -- a well-established technique for reasoning about cache
-// behavior without hardware counters, clearly labeled as a proxy below.
+// Where a real cache-miss counter would normally be used, this file instead
+// measures latency under access patterns specifically chosen to make cache
+// effects visible (a small working set vs. one that overflows L2/L3) -- a
+// well-established technique for reasoning about cache behavior without
+// hardware counters, and clearly labeled as a proxy below.
 // ---------------------------------------------------------------------------
 
 static std::atomic<long> g_alloc_count{0};
@@ -180,7 +179,7 @@ void bench_atomic_cost() {
         printf("  1 thread,  private counter : %.2f ns/op\n", ns_per_op);
     }
 
-    // Contended: N threads hammering the SAME atomic (cache-line ping-pong).
+    // Contended: N threads hammering the same atomic (cache-line ping-pong).
     for (int threads : {2, 4, 8}) {
         std::atomic<long> counter{0};
         std::vector<std::thread> workers;
@@ -202,8 +201,8 @@ void bench_atomic_cost() {
 
 // ---------------------------------------------------------------------------
 // 4. Lock contention, isolated: latency percentiles vs. thread count at a
-// FIXED, deliberately low shard count, so the tail growth is attributable
-// to lock wait time rather than any change in the underlying work per op.
+// fixed, deliberately low shard count, so tail growth is attributable to
+// lock wait time rather than any change in the underlying work per op.
 // ---------------------------------------------------------------------------
 
 void bench_lock_contention_isolated() {
@@ -211,7 +210,7 @@ void bench_lock_contention_isolated() {
 
     const int N = 20000;
     auto keys = make_keys(N);
-    const int SHARD_COUNT = 4; // deliberately low, to make contention pronounced
+    const int SHARD_COUNT = 4; // Deliberately low, to make contention pronounced.
     const int SAMPLES_PER_THREAD = 4000;
 
     for (int threads : {1, 2, 4, 8}) {
